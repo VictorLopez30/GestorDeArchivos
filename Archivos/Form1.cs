@@ -11,7 +11,7 @@ namespace Archivos
     public partial class Form1 : Form
     {
         string carpeta = @"ruta";
-        //Hola a todos papus
+        //Majin, estás bien en nadadores? 
         string archivoActual = "";
 
         List<Registro> lista = new List<Registro>();
