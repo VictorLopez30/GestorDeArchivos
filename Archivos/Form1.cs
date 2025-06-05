@@ -10,7 +10,7 @@ namespace Archivos
 {
     public partial class Form1 : Form
     {
-        string carpeta = @"C:\Users\cerva\source\repos\Archivos\Archivos\bin\Debug\Archivos";
+        string carpeta = @"ruta";
         string archivoActual = "";
 
         List<Registro> lista = new List<Registro>();
@@ -116,14 +116,40 @@ namespace Archivos
 
         void CargarDesdeTxt()
         {
-            string[] lineas = File.ReadAllLines(archivoActual);
+            lista.Clear();
+            var lineas = File.ReadAllLines(archivoActual);
+            string nombre = "", carrera = "";
+            int edad = 0;
+
             foreach (var linea in lineas)
             {
-                string[] partes = linea.Split(',');
-                if (partes.Length == 3)
-                    lista.Add(new Registro(partes[0], int.Parse(partes[1]), partes[2]));
+                if (linea.StartsWith("Nombre:"))
+                    nombre = linea.Substring(7).Trim();
+                else if (linea.StartsWith("Edad:"))
+                    int.TryParse(linea.Substring(5).Trim(), out edad);
+                else if (linea.StartsWith("Carrera:"))
+                    carrera = linea.Substring(8).Trim();
+                else if (string.IsNullOrWhiteSpace(linea))
+                {
+                    if (!string.IsNullOrWhiteSpace(nombre))
+                    {
+                        lista.Add(new Registro(nombre, edad, carrera));
+                        // Limpiar variables para el siguiente registro
+                        nombre = "";
+                        edad = 0;
+                        carrera = "";
+                    }
+                }
+            }
+
+            // Asegura que el último registro se agregue si no hay línea vacía al final
+            if (!string.IsNullOrWhiteSpace(nombre))
+            {
+                lista.Add(new Registro(nombre, edad, carrera));
             }
         }
+
+
 
         void CargarDesdeExcel()
         {
@@ -221,12 +247,26 @@ namespace Archivos
             }
             else if (archivoActual.EndsWith(".txt"))
             {
-                var lineas = lista.Select(r => $"{r.Nombre},{r.Edad},{r.Carrera}");
-                File.WriteAllLines(archivoActual, lineas);
+                var lineas = lista.Select(r =>
+                    $"Nombre: {r.Nombre}\nEdad: {r.Edad}\nCarrera: {r.Carrera}\n");
+
+                File.WriteAllText(archivoActual, string.Join("\n", lineas));
             }
+
             else if (archivoActual.EndsWith(".xlsx"))
             {
-                var libro = new XLWorkbook();
+                XLWorkbook libro;
+                if (File.Exists(archivoActual))
+                {
+                    libro = new XLWorkbook(archivoActual);
+                    if (libro.Worksheets.Contains("Datos"))
+                        libro.Worksheet("Datos").Delete();
+                }
+                else
+                {
+                    libro = new XLWorkbook();
+                }
+
                 var hoja = libro.Worksheets.Add("Datos");
 
                 hoja.Cell(1, 1).Value = "Nombre";
@@ -244,6 +284,7 @@ namespace Archivos
 
                 libro.SaveAs(archivoActual);
             }
+
 
             MessageBox.Show("Archivo guardado.");
         }
@@ -300,16 +341,9 @@ namespace Archivos
                 MessageBox.Show("Selecciona un archivo primero.");
                 return;
             }
-             if (archivoActual.EndsWith(".json")) CargarDesdeJson();
-            else if (archivoActual.EndsWith(".txt")) CargarDesdeTxt();
-            else if (archivoActual.EndsWith(".xlsx")) CargarDesdeExcel();
 
-            // Toma el nombre del archivo seleccionado y construye la ruta completa
-            string carpeta = @"C:\Users\cerva\source\repos\Archivos\Archivos\bin\Debug\Archivos";
-            string nombreArchivo = comboBoxArchivos.SelectedItem.ToString();
-            archivoActual = Path.Combine(carpeta, nombreArchivo);
+            archivoActual = Path.Combine(carpeta, comboBoxArchivos.SelectedItem.ToString());
 
-            // Limpia la lista antes de agregar nuevos datos
             lista.Clear();
 
             // Carga según el tipo de archivo
